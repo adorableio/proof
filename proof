@@ -34,25 +34,38 @@ while getopts 'hs' opt; do
   esac
 done
 
-# Read configuration
-config_file=.proofrc
+# Read global configuration
+if [ -e ~/.proofrc ]; then
+  . ~/.proofrc
+fi
+
+if [[ -z "$default_docroot" ]]; then
+  default_docroot=/var/www/html/static.adorable.io
+fi
+
+# Read project configuration
+config_file=./.proofrc
 if [ -e $config_file ]; then
   . $config_file
 else
   alert "Could not find a config file for this project. Let's build one!"
 
-  server=static.whazzmaster.com
-  ask 'What server will this be pushed to? (default: '$server')'
+  if [[ -z "$default_server" ]] ; then default_server='static.adorable.io' ; fi
+  ask 'What server will this be pushed to? (default: '$default_server')'
   read g_server
   if [ -n "$g_server" ]; then
     server=$g_server
+  else
+    server=$default_server
   fi
 
-  target='dist'
+  if [[ -z "$default_target" ]] ; then default_target='dist' ; fi
   ask 'What local directory should be pushed? (default: ./'$target')'
   read g_target
   if [ -n "$g_target" ]; then
     target=$g_target
+  else
+    target=$default_target
   fi
 
   name=${PWD##*/}
@@ -61,6 +74,30 @@ else
   if [ -n "$g_name" ]; then
     name=$g_name
   fi
+fi
+
+# Check for SSH keys
+if [[ -n "$default_key_file" ]]; then
+  key_file=$default_key_file
+else
+  key_file=~/.ssh/proof_rsa
+fi
+
+if [[ -n "$default_pub_file" ]]; then
+  pub_file=$default_pub_file
+else
+  pub_file=~/.ssh/proof_rsa.pub
+fi
+
+if [ ! -e $key_file ] || [ ! -e $pub_file ]; then
+  alert "Could not find '$key_file' or '$pub_file'. Cannot continue."
+  alert "  1. Ensure the proof SSH keys are in your ~/.ssh directory"
+  alert "  2. Ensure the following block is in your ~/.ssh/config file:"
+  alert "     Host static.whazzmaster.com"
+  alert "       Hostname static.whazzmaster.com"
+  alert "       User abott"
+  alert "       IdentityFile ~/.ssh/proof_rsa"
+  exit 1
 fi
 
 # Report configuration
@@ -76,3 +113,28 @@ if [ $silent -eq 0 ]; then
     exit 1
   fi
 fi
+
+info "Creating remote directory $default_docroot/$name..."
+ssh $server bash -c "'
+sudo mkdir -p $default_docroot/$name
+sudo chown -R www-data:www-data $default_docroot/$name
+sudo chmod 775 -R $default_docroot/$name
+'"
+
+info 'Creating nginx config...'
+echo '   (not implemented yet)'
+
+info 'Uploading files...'
+rsync -avz --omit-dir-times --no-perms -e ssh $target/ $server:$default_docroot/$name/
+
+info 'Updating nginx config...'
+echo '   (not implemented yet)'
+
+info 'Testing nginx config...'
+echo '   (not implemented yet)'
+
+info 'Reloading nginx config...'
+echo '   (not implemented yet)'
+
+info "Done; opening http://$server/$name to see the site"
+open http://$server/$name

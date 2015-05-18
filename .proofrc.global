@@ -1,0 +1,5 @@
+default_server=static.adorable.io
+default_target=dist
+default_docroot=/var/www/html/$default_server
+default_key_file=~/.ssh/proof_rsa
+default_pub_file=~/.ssh/proof_rsa.pub

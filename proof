@@ -34,6 +34,12 @@ while getopts 'hrs' opt; do
   case $opt in
     h)
       echo "Usage: proof [-h] [-s]"
+      echo ""
+      echo "Pushes static site content to a configured server."
+      echo ""
+      echo "  -h    Display help"
+      echo "  -r    Remove current project from server"
+      echo "  -s    Silent mode (supresses confirmation before acting)"
       exit 0
       ;;
     r)
@@ -46,10 +52,10 @@ while getopts 'hrs' opt; do
 done
 
 # ---------------------------------------------------------
-#
+# Read global configuration
 # ---------------------------------------------------------
-if [ -e ~/.proofrc ]; then
-  . ~/.proofrc
+if [ -e ~/.proofrc.global ]; then
+  . ~/.proofrc.global
 fi
 
 if [[ -z "$default_docroot" ]]; then
@@ -136,7 +142,6 @@ fi
 # ---------------------------------------------------------
 #  Report the configuration to be used for upload
 # ---------------------------------------------------------
-echo
 info "The contents of ./$target will be available at http://$server/$name"
 if [ $silent -eq 0 ]; then
   ask 'Shall we proceed? (Y/n)'

@@ -1,31 +1,92 @@
-# Proof: Instant feedback on static web content
+# Proof
 
-## Steps
+Instant feedback on static web content. Once configured, allows fast
+and easy iteration and sharing of static front-end content via a server
+configured with [nginx](http://nginx.org).
 
-1. Read config from `.proofrc`, if it exists
-    1. If it doesn't exist then ask questions to form config
-    1. Write config to .proofrc
-1. Test ssh access; return error if not setup
-1. Use `rsync` to push the selected target directory to the chosen subdirectory on the server.
-1. Create a location directive file based on configuration and push it to `/etc/nginx/static-projects/` on the server.
-1. Use `nginx -t` to test that everything is ok.
-1. Reload nginx service
+Let's assume **you're working on a front-end project**; could be an angular app
+or just iterating on a design. **You're using [gulp]() or [broccoli]()** to
+build your front-end structure and assets into a `dist` directory. You want
+to **get some quick feedback from a coworker or client**.
 
-## Miscellaneous Thoughts
+You're in your project directory: `~/code/foo` and you run
 
-* Name of subdirectory should be configurable
-* Target server name should be configurable
-* Should allow for HTTP basic auth of specific subdirectories
-* Should allow for whatever target directory (containing dist build) to be pushed
+```
+~/code/foo $ proof
+```
 
-## Client Requirements
+and **poof** your content is available at http://static.adorable.io/foo
 
-* Client **must** have abott's proof rsa keys (found in 1Password)
-* Client **must** have an SSH config entry for the proof server
+## Installation
 
-### Server Requirements
+1. Clone the repo
 
-* Server **must** be setup with abott's rsa keys
-* Server **must** allow the `abott` user passwordless login
-* Server **must** allow the `abott` user passwordless `sudo`
-* The `abott` user must be part of the `www-data` group
+        git clone https://github.com/adorableio/proof.git
+
+1. Copy the script
+
+        cd proof
+        cp ./proof /usr/local/bin/proof
+
+1. Copy the example global config to your home directory
+
+        cp .proofrc.global ~/.proofrc.global
+
+1. Copy the `proof_rsa` and `proof_rsa.pub` files from the 1Password vault to your `~/.ssh` directory.
+1. Add the following block to your `~/.ssh/config` file:
+
+        Host proof static.adorable.io
+          Hostname static.adorable.io
+          User abott
+          IdentityFile ~/.ssh/proof_rsa
+
+## Usage
+
+```
+Usage: proof [-h] [-s] [-r]
+
+Pushes static site content to a configured server.
+
+  -h    Show usage/help
+  -s    Silent mode (suppresses confirmation before acting)
+  -r    Remove project from server
+```
+
+## Configuration
+There are several different client configurations to manage: **global**, and
+**per-project**. The global configuration manages defaults about the server,
+whereas the per-project one manages any overrides or settings for the
+particular project.
+
+### Global
+The global configuration is stored in `~/.proofrc.global` and defines defaults
+for any project you push from your machine.
+
+```sh
+# The default server to SSH into
+default_server=static.adorable.io
+# The default relative directory to rsync to the server
+default_target=dist
+# The default root directory to rsync to on the server
+default_docroot=/var/www/html/$default_server
+# The key file to use for the server
+default_key_file=~/.ssh/proof_rsa
+# The public key to use for the server
+default_pub_file=~/.ssh/proof_rsa.pub
+```
+
+### Per-Project
+The per-project configuration defines the specific settings used when pushing
+the current project contents to the server.
+
+```sh
+# Server this project is pushed to
+server=static.adorable.io
+# Local relative directory to push content from
+target=dist
+# Remote name/subdirectory used for the project
+name=proof
+```
+
+### Server
+

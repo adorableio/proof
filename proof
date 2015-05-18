@@ -1,32 +1,43 @@
 #!/usr/bin/env bash
 
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
+
 set -e
 
 alert() {
   local red='\x1b[31;01m'
   local no_color='\x1b[39;49;00m'
-  echo -e "🍗 ${red} $1${no_color}"
+  echo -e "🍗 ${red}$1${no_color}"
 }
 
 ask() {
   local yellow='\x1b[33;01m'
   local no_color='\x1b[39;49;00m'
-  echo -e "🍗 ${yellow} $1${no_color}"
+  echo -e "🍗 ${yellow}$1${no_color}"
 }
 
 info() {
   local green='\x1b[32;01m'
   local no_color='\x1b[39;49;00m'
-  echo -e "${green} $1${no_color}"
+  echo -e "${green}$1${no_color}"
 }
 
 silent=0
+remove=0
 
-while getopts 'hs' opt; do
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
+while getopts 'hrs' opt; do
   case $opt in
     h)
       echo "Usage: proof [-h] [-s]"
       exit 0
+      ;;
+    r)
+      remove=1
       ;;
     s)
       silent=1
@@ -34,7 +45,9 @@ while getopts 'hs' opt; do
   esac
 done
 
-# Read global configuration
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
 if [ -e ~/.proofrc ]; then
   . ~/.proofrc
 fi
@@ -43,7 +56,9 @@ if [[ -z "$default_docroot" ]]; then
   default_docroot=/var/www/html/static.adorable.io
 fi
 
-# Read project configuration
+# ---------------------------------------------------------
+#  Read (or ask for) project configuration
+# ---------------------------------------------------------
 config_file=./.proofrc
 if [ -e $config_file ]; then
   . $config_file
@@ -76,7 +91,9 @@ else
   fi
 fi
 
-# Check for SSH keys
+# ---------------------------------------------------------
+# Validate SSH Keys
+# ---------------------------------------------------------
 if [[ -n "$default_key_file" ]]; then
   key_file=$default_key_file
 else
@@ -100,9 +117,27 @@ if [ ! -e $key_file ] || [ ! -e $pub_file ]; then
   exit 1
 fi
 
-# Report configuration
+# ---------------------------------------------------------
+#  Remove remote project directory
+# ---------------------------------------------------------
+if [[ $remove -gt 0 ]]; then
+  info "Removing content at http://$server/$name..."
+  ssh $server bash -c "'sudo rm -rf $default_docroot/$name'"
+
+  info "Removing nginx configuration for $name..."
+  echo "   (not implemented)"
+
+  info "Reloading nginx configuration..."
+  echo "   (not implemented)"
+
+  exit 0
+fi
+
+# ---------------------------------------------------------
+#  Report the configuration to be used for upload
+# ---------------------------------------------------------
 echo
-info 'The contents of ./'$target' will be available at http://'$server'/'$name
+info "The contents of ./$target will be available at http://$server/$name"
 if [ $silent -eq 0 ]; then
   ask 'Shall we proceed? (Y/n)'
   read -n 1 proceed
@@ -114,6 +149,9 @@ if [ $silent -eq 0 ]; then
   fi
 fi
 
+# ---------------------------------------------------------
+#  Creating remote directories/setting permissions
+# ---------------------------------------------------------
 info "Creating remote directory $default_docroot/$name..."
 ssh $server bash -c "'
 sudo mkdir -p $default_docroot/$name
@@ -121,18 +159,33 @@ sudo chown -R www-data:www-data $default_docroot/$name
 sudo chmod 775 -R $default_docroot/$name
 '"
 
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
 info 'Creating nginx config...'
 echo '   (not implemented yet)'
 
+# ---------------------------------------------------------
+#  Creating remote directories/setting permissions
+# ---------------------------------------------------------
 info 'Uploading files...'
 rsync -avz --omit-dir-times --no-perms -e ssh $target/ $server:$default_docroot/$name/
 
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
 info 'Updating nginx config...'
 echo '   (not implemented yet)'
 
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
 info 'Testing nginx config...'
 echo '   (not implemented yet)'
 
+# ---------------------------------------------------------
+#
+# ---------------------------------------------------------
 info 'Reloading nginx config...'
 echo '   (not implemented yet)'
 
